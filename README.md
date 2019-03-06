@@ -1,0 +1,2 @@
+# scrayping
+pythonでスクレイピングアプリを生成

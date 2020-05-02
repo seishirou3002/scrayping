@@ -1,0 +1,70 @@
+from bs4 import BeautifulSoup
+import requests
+import time
+
+#ページ遷移が終わるまで画像URLを取得する
+def getScrapList():
+  #画像URLリストを用意
+  img_list = []
+  dynamic_url = "https://dougle.one/archives/77516" #初期URL
+  
+  while True:
+    # 前処理
+    #指定したURLのhtmlを取得する
+    res = requests.get(dynamic_url)
+    res.raise_for_status() # エラー処理
+    soup = BeautifulSoup(res.content,"html.parser")
+    
+  
+    # img itemprop="contentUrl"タグに画像が貼られているため取得
+    img_src_list = soup.find_all("img",itemprop="contentUrl")
+   
+    #画像取得処理
+    for img in img_src_list:
+    
+      #img srcタグのurlをリストに格納
+      img_list.append(img['src'])
+
+    #ページ遷移処理
+    #次ページのURLを取得する
+    #post-page-numbersクラスのうち、次ページの記載があるタグ内に次ページのURLが含まれているため
+    next_page = soup.find(class_="post-page-numbers",string="次のページ")    
+    #次のページのアドレスがない場合終了する
+    if bool(next_page) == False:
+      break
+    
+    #next_pageに次ページのURLが記載されているためその部分を次ページに変更
+    dynamic_url = next_page['href']
+    time.sleep(1)
+ 
+  print("読み込み完了")
+  return img_list
+
+# 画像ダウンロード処理
+def getImage(img_url_list):
+  count = 1
+  for img_url in img_url_list:
+    # ファイル名生成
+    img_file_name = createFilename(img_url)
+    
+    #画像保存処理
+    response = requests.get(img_url)
+    img = response.content
+    with open(img_file_name,'wb') as img_binary:
+      img_binary.write(img)
+    print(count/len(img_url_list) * 100 + "%完了")
+    count = count + 1
+    
+  print("保存完了")
+
+# ファイル名生成
+# 画像URLの末尾にあるxxx.jpgをファイル名とする
+# /区切りにした末尾にファイル名があるため抽出する
+def createFilename(url):
+  tmp = url.split('/')
+  last_idx = len(tmp)
+  file_name = tmp[last_idx - 1]
+  return file_name
+
+img_list = getScrapList()
+getImage(img_list)
